@@ -30,7 +30,7 @@ long double sumx, sumx2, sumy, sumxy;
 long double A = 0, B = 0;
 
 long long updateTime = -1000000000;
-  
+
 double alt0 = 0;
 double curTemp, curHum, curAlt;
 long curPres;
@@ -57,11 +57,11 @@ void setup() {
   if (!bme.begin()) {
     Serial.print("Failed\n");
     /*Serial.println("Could not find a valid BME280 sensor, check wiring, address, sensor ID!");
-    Serial.print("SensorID was: 0x"); Serial.println(bme.sensorID(), 16);
-    Serial.print("        ID of 0xFF probably means a bad address, a BMP 180 or BMP 085\n");
-    Serial.print("   ID of 0x56-0x58 represents a BMP 280,\n");
-    Serial.print("        ID of 0x60 represents a BME 280.\n");
-    Serial.print("        ID of 0x61 represents a BME 680.\n");*/
+      Serial.print("SensorID was: 0x"); Serial.println(bme.sensorID(), 16);
+      Serial.print("        ID of 0xFF probably means a bad address, a BMP 180 or BMP 085\n");
+      Serial.print("   ID of 0x56-0x58 represents a BMP 280,\n");
+      Serial.print("        ID of 0x60 represents a BME 280.\n");
+      Serial.print("        ID of 0x61 represents a BME 680.\n");*/
     while (1);
   }
   if (u8g.getMode() == U8G_MODE_R3G3B2) {
@@ -105,85 +105,61 @@ void setup() {
 }
 
 void draw(void) {
-  if (millis() - initTime <= 3000) {
-    u8g.setPrintPos(15, 30);
-    u8g.print("For Nuni by Petr");
-    char a[] = {
-      0b01100110,
-      0b11111111,
-      0b11111111,
-      0b01111110,
-      0b00111100,
-      0b00011000
-    };
-    for (int i = 0; i < sizeof(a); i++) {
-      for (int j = 0; j < 8; j++) {
-        if (a[i] >> (7 - j) & 1) {
-          u8g.drawPixel(56 + 2 * j + 0, 40 + 2 * i + 0);
-          u8g.drawPixel(56 + 2 * j + 0, 40 + 2 * i + 1);
-          u8g.drawPixel(56 + 2 * j + 1, 40 + 2 * i + 0);
-          u8g.drawPixel(56 + 2 * j + 1, 40 + 2 * i + 1);
-        }
+  String prediction;
+  double temp = (double)A * 3600.0;
+  if (temp <= -150.0) prediction = "storm";
+  else if (temp <= -75.0) prediction = "rain";
+  else if (temp < 75) prediction = "same";
+  else prediction = "clear";
+  switch (mode) {
+    case (0):
+      u8g.setPrintPos(0, 14);
+      u8g.print(String((double)A * 3600.0) + " Pa/Hr" + " (" + prediction + ")");
+      u8g.setPrintPos(0, 26);
+      u8g.print("Temp: " + String(round(curTemp * 10.0) / 10.0));
+      u8g.setPrintPos(0, 38);
+      u8g.print("Hum: " + String((int)curHum) + "%");
+      u8g.setPrintPos(0, 50);
+      u8g.print("Pres: " + String(paToMercury(curPres)) + " mm");
+      u8g.setPrintPos(0, 62);
+      break;
+    case (1):
+      u8g.setPrintPos(0, 14);
+      u8g.print(String((double)A * 3600.0) + " Pa/Hr" + " (" + prediction + ")");
+      u8g.setPrintPos(0, 26);
+      u8g.print("Temp: " + String(curTemp));
+      u8g.setPrintPos(0, 38);
+      u8g.print("Hum: " + String(curHum) + "%");
+      u8g.setPrintPos(0, 50);
+      u8g.print("Pres: " + String(paToMercury(curPres)) + " mm");
+      u8g.setPrintPos(0, 62);
+      u8g.print("Height: " + String(curAlt - alt0) + " m");
+      break;
+    case (2):
+      u8g.setPrintPos(0, 14);
+      u8g.print("Pressure");
+      u8g.setPrintPos(0, 25);
+      u8g.print(String(mxp / 10) + '.' + String(mxp % 10));
+      u8g.setPrintPos(0, 63);
+      u8g.print(String(mnp / 10) + '.' + String(mnp % 10));
+      for (int i = 1; i < tpres_sz; i++) {
+        u8g.drawLine(presx[i - 1], presy[i - 1], presx[i], presy[i]);
       }
-    }
+      break;
+    case (3):
+      u8g.setPrintPos(0, 14);
+      u8g.print("Temperature");
+      u8g.setPrintPos(0, 25);
+      u8g.print(String(mxt / 10) + '.' + String(mxt % 10));
+      u8g.setPrintPos(0, 63);
+      u8g.print(String(mnt / 10) + '.' + String(mnt % 10));
+      for (int i = 1; i < tpres_sz; i++) {
+        u8g.drawLine(tx[i - 1], ty[i - 1], tx[i], ty[i]);
+      }
+      break;
   }
-  else {
-    String prediction;
-    double temp = (double)A * 3600.0;
-    if (temp <= -150.0) prediction = "storm";
-    else if (temp <= -75.0) prediction = "rain";
-    else if (temp < 75) prediction = "same";
-    else prediction = "clear";
-    switch (mode) {
-      case (0):
-        u8g.setPrintPos(0, 14);
-        u8g.print(String((double)A * 3600.0) + " Pa/Hr" + " (" + prediction + ")");
-        u8g.setPrintPos(0, 26);
-        u8g.print("Temp: " + String(round(curTemp * 10.0) / 10.0));
-        u8g.setPrintPos(0, 38);
-        u8g.print("Hum: " + String((int)curHum) + "%");
-        u8g.setPrintPos(0, 50);
-        u8g.print("Pres: " + String(paToMercury(curPres)) + " mm");
-        u8g.setPrintPos(0, 62);
-        break;
-      case (1):
-        u8g.setPrintPos(0, 14);
-        u8g.print(String((double)A * 3600.0) + " Pa/Hr" + " (" + prediction + ")");
-        u8g.setPrintPos(0, 26);
-        u8g.print("Temp: " + String(curTemp));
-        u8g.setPrintPos(0, 38);
-        u8g.print("Hum: " + String(curHum) + "%");
-        u8g.setPrintPos(0, 50);
-        u8g.print("Pres: " + String(paToMercury(curPres)) + " mm");
-        u8g.setPrintPos(0, 62);
-        u8g.print("Height: " + String(curAlt - alt0) + " m");
-        break;
-      case (2):
-        u8g.setPrintPos(0, 14);
-        u8g.print("Pressure");
-        u8g.setPrintPos(0, 25);
-        u8g.print(String(mxp / 10) + '.' + String(mxp % 10));
-        u8g.setPrintPos(0, 63);
-        u8g.print(String(mnp / 10) + '.' + String(mnp % 10));
-        for (int i = 1; i < tpres_sz; i++) {
-          u8g.drawLine(presx[i - 1], presy[i - 1], presx[i], presy[i]);
-        }
-        break;
-      case (3):
-        u8g.setPrintPos(0, 14);
-        u8g.print("Temperature");
-        u8g.setPrintPos(0, 25);
-        u8g.print(String(mxt / 10) + '.' + String(mxt % 10));
-        u8g.setPrintPos(0, 63);
-        u8g.print(String(mnt / 10) + '.' + String(mnt % 10));
-        for (int i = 1; i < tpres_sz; i++) {
-          u8g.drawLine(tx[i - 1], ty[i - 1], tx[i], ty[i]);
-        }
-        break;
-    }
-    u8g.setPrintPos(122, 14);
-    u8g.print(mode + 1);
-  }
+  u8g.setPrintPos(122, 14);
+  u8g.print(mode + 1);
 }
 
 void loop() {
@@ -195,7 +171,7 @@ void loop() {
 }
 
 void Main() {
-  if (button() == false && oldButton == true){
+  if (button() == false && oldButton == true) {
     if (millis() - timeReleased >= 1000 && mode == 1) {
       alt0 = curAlt;
     }
